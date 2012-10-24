@@ -26,9 +26,17 @@ func next(data []byte) (skip, tag, rest []byte) {
 }
 
 func Unmarshal(data []byte, v interface{}) error {
-	_, tag, data := next(data)
-	if !bytes.HasPrefix(tag, []byte("<plist")) {
-		return fmt.Errorf("not a plist")
+	var tag []byte
+	for {
+		_, tag, data = next(data)
+		if bytes.HasPrefix(tag, []byte("<?xml")) || bytes.HasPrefix(tag, []byte("<!DOCTYPE")) {
+			// skip over declarations
+			continue
+		}
+		if !bytes.HasPrefix(tag, []byte("<plist")) {
+			return fmt.Errorf("not a plist")
+		}
+		break
 	}
 
 	data, err := unmarshalValue(data, reflect.ValueOf(v))
