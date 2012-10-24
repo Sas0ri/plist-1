@@ -83,6 +83,15 @@ var moreTypesPlist = `<?xml version="1.0" encoding="UTF-8"?>
 </plist>
 `
 
+var dataPlist = `
+<plist version="1.0">
+<dict>
+    <key>Data</key>
+    <data>SGVsbG8gV29ybGQ=</data>
+</dict>
+</plist>
+`
+
 var plistTests = []struct {
 	in  string
 	out interface{}
@@ -139,6 +148,12 @@ var plistTests = []struct {
 			},
 		},
 	},
+	{
+		dataPlist,
+		&DataTest{
+			Data: []byte("Hello World"),
+		},
+	},
 }
 
 type MyStruct struct {
@@ -170,6 +185,10 @@ type President struct {
 	Name string
 	Assassinated bool
 	Scores []interface{}
+}
+
+type DataTest struct {
+	Data []byte
 }
 
 func MustRFC3339Parse(val string) (res time.Time) {

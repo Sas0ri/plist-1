@@ -7,6 +7,7 @@ package plist
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -189,6 +190,20 @@ func unmarshalValue(data []byte, v reflect.Value) (rest []byte, err error) {
 			return nil, fmt.Errorf("non-date in <date> tag: %s", body)
 		}
 		v.Set(reflect.ValueOf(t))
+		return data, nil
+	case "<data>":
+		body, etag, data := next(data)
+		if len(etag) == 0 {
+			return nil, fmt.Errorf("eof inside <data>")
+		}
+		if string(etag) != "</data>" {
+			return nil, fmt.Errorf("expected </data> but got %s", etag)
+		}
+		d, err := base64.StdEncoding.DecodeString(string(body))
+		if err != nil {
+			return nil, fmt.Errorf("non-base64 in <data> tag: %s", body)
+		}
+		v.Set(reflect.ValueOf(d))
 		return data, nil
 	case "<true/>":
 		b := true
