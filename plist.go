@@ -177,11 +177,6 @@ func unmarshalValue(data []byte, v reflect.Value) (rest []byte, err error) {
 		v.Set(reflect.ValueOf(f))
 		return data, nil
 	case "<date>":
-		/*
-		if reflect.TypeOf(&time.Time{}).AssignableTo(v.Type()) {
-			return nil, fmt.Errorf("cannot unmarshal <date> into non-time %s", v.Type())
-		}
-		*/
 		body, etag, data := next(data)
 		if len(etag) == 0 {
 			return nil, fmt.Errorf("eof inside <date>")
