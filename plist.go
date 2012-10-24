@@ -87,6 +87,9 @@ func unmarshalValue(data []byte, v reflect.Value) (rest []byte, err error) {
 				f := t.Field(i)
 				if f.Name == name || f.Tag.Get("plist") == name {
 					data, err = unmarshalValue(data, v.Field(i))
+					if err != nil {
+						return nil, err
+					}
 					continue Dict
 				}
 			}
