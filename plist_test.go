@@ -7,6 +7,7 @@ package plist
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 var thePlist = `<plist version="1.0">
@@ -44,6 +45,44 @@ var thePlist = `<plist version="1.0">
 </plist>
 `
 
+var moreTypesPlist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
+<plist version="1.0">
+<dict>
+    <key>Lincoln</key>
+    <dict>
+        <key>DOB</key>
+        <date>1809-02-12T09:18:00Z</date>
+        <key>Name</key>
+        <string>Abraham Lincoln</string>
+        <key>Scores</key>
+        <array>
+            <integer>8</integer>
+            <real>4.9000000953674316</real>
+            <integer>9</integer>
+        </array>
+        <key>Assassinated</key>
+        <true/>
+    </dict>
+    <key>Washington</key>
+    <dict>
+        <key>DOB</key>
+        <date>1732-02-17T01:32:00Z</date>
+        <key>Name</key>
+        <string>George Washington</string>
+        <key>Scores</key>
+        <array>
+            <integer>6</integer>
+            <real>4.5999999046325684</real>
+            <integer>6</integer>
+        </array>
+        <key>Assassinated</key>
+        <false/>
+    </dict>
+</dict>
+</plist>
+`
+
 var plistTests = []struct {
 	in  string
 	out interface{}
@@ -75,6 +114,31 @@ var plistTests = []struct {
 		thePlist,
 		&struct{}{},
 	},
+	{
+		moreTypesPlist,
+		&PresTest{
+			Lincoln: President{
+				DOB: MustRFC3339Parse("1809-02-12T09:18:00Z"),
+				Name: "Abraham Lincoln",
+				Assassinated: true,
+				Scores: []interface{}{
+					8,
+					4.9000000953674316,
+					9,
+				},
+			},
+			Washington: President{
+				DOB: MustRFC3339Parse("1732-02-17T01:32:00Z"),
+				Name: "George Washington",
+				Assassinated: false,
+				Scores: []interface{}{
+					6,
+					4.5999999046325684,
+					6,
+				},
+			},
+		},
+	},
 }
 
 type MyStruct struct {
@@ -96,6 +160,26 @@ type Exclude2 struct {
 	Text string `plist:"text"`
 }
 
+type PresTest struct {
+	Lincoln	President
+	Washington President
+}
+
+type President struct {
+	DOB	time.Time
+	Name string
+	Assassinated bool
+	Scores []interface{}
+}
+
+func MustRFC3339Parse(val string) (res time.Time) {
+	res, err := time.Parse(time.RFC3339, val)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
 func TestUnmarshal(t *testing.T) {
 	for _, tt := range plistTests {
 		v := reflect.New(reflect.ValueOf(tt.out).Type().Elem()).Interface()
@@ -104,7 +188,7 @@ func TestUnmarshal(t *testing.T) {
 			continue
 		}
 		if !reflect.DeepEqual(tt.out, v) {
-			t.Errorf("unmarshal not equal")
+			t.Errorf("unmarshal not equal (%#v != %#v", tt.out, v)
 		}
 	}
 }

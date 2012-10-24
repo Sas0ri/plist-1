@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 func next(data []byte) (skip, tag, rest []byte) {
@@ -132,9 +133,6 @@ func unmarshalValue(data []byte, v reflect.Value) (rest []byte, err error) {
 		return data, nil
 
 	case "<string>":
-		if v.Kind() != reflect.String {
-			return nil, fmt.Errorf("cannot unmarshal <string> into non-string %s", v.Type())
-		}
 		body, etag, data := next(data)
 		if len(etag) == 0 {
 			return nil, fmt.Errorf("eof inside <string>")
@@ -142,13 +140,11 @@ func unmarshalValue(data []byte, v reflect.Value) (rest []byte, err error) {
 		if string(etag) != "</string>" {
 			return nil, fmt.Errorf("expected </string> but got %s", etag)
 		}
-		v.SetString(string(body)) // TODO: unescape
+		// TODO: unescape
+		v.Set(reflect.ValueOf(string(body)))
 		return data, nil
 
 	case "<integer>":
-		if v.Kind() != reflect.Int {
-			return nil, fmt.Errorf("cannot unmarshal <integer> into non-int %s", v.Type())
-		}
 		body, etag, data := next(data)
 		if len(etag) == 0 {
 			return nil, fmt.Errorf("eof inside <integer>")
@@ -160,7 +156,52 @@ func unmarshalValue(data []byte, v reflect.Value) (rest []byte, err error) {
 		if err != nil {
 			return nil, fmt.Errorf("non-integer in <integer> tag: %s", body)
 		}
-		v.SetInt(int64(i))
+		v.Set(reflect.ValueOf(i))
+		return data, nil
+	case "<real>":
+		bits := 64
+		if v.Kind() == reflect.Float32 {
+			bits = 32
+		}
+		body, etag, data := next(data)
+		if len(etag) == 0 {
+			return nil, fmt.Errorf("eof inside <real>")
+		}
+		if string(etag) != "</real>" {
+			return nil, fmt.Errorf("expected </real> but got %s", etag)
+		}
+		f, err := strconv.ParseFloat(string(body), bits)
+		if err != nil {
+			return nil, fmt.Errorf("non-float in <real> tag: %s", body)
+		}
+		v.Set(reflect.ValueOf(f))
+		return data, nil
+	case "<date>":
+		/*
+		if reflect.TypeOf(&time.Time{}).AssignableTo(v.Type()) {
+			return nil, fmt.Errorf("cannot unmarshal <date> into non-time %s", v.Type())
+		}
+		*/
+		body, etag, data := next(data)
+		if len(etag) == 0 {
+			return nil, fmt.Errorf("eof inside <date>")
+		}
+		if string(etag) != "</date>" {
+			return nil, fmt.Errorf("expected </date> but got %s", etag)
+		}
+		t, err := time.Parse(time.RFC3339, string(body))
+		if err != nil {
+			return nil, fmt.Errorf("non-date in <date> tag: %s", body)
+		}
+		v.Set(reflect.ValueOf(t))
+		return data, nil
+	case "<true/>":
+		b := true
+		v.Set(reflect.ValueOf(b))
+		return data, nil
+	case "<false/>":
+		b := false
+		v.Set(reflect.ValueOf(b))
 		return data, nil
 	}
 	return nil, fmt.Errorf("unexpected tag %s", tag)
